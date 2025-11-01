@@ -206,7 +206,7 @@ function setupGameMode() {
     // Update UI
     document.body.classList.remove('practice-mode');
     document.body.classList.remove('transitions-mode');
-    modeText.textContent = '🎮 Spelläge';
+    modeText.textContent = '🧮 Matteträning';
 
     // Show/hide appropriate headers
     gameStats.style.display = 'flex';
@@ -344,8 +344,20 @@ function generateProblem() {
 
         // Calculate correct answer
         currentAnswer = currentNum1 * currentNum2;
+    } else if (currentMode === 'game') {
+        // Game mode - mixed content: 30% transitions, 70% multiplication
+        if (Math.random() < 0.3) {
+            // 30% chance: Generate transition problem
+            generateTransitionProblem();
+        } else {
+            // 70% chance: Generate multiplication
+            currentNum1 = randomInt(1, 10);
+            currentNum2 = randomInt(1, 10);
+            currentOperation = '×';
+            currentAnswer = currentNum1 * currentNum2;
+        }
     } else {
-        // Game mode or mixed practice
+        // Mixed practice mode
         currentNum1 = randomInt(1, 10);
         currentNum2 = randomInt(1, 10);
         currentOperation = '×';
@@ -384,7 +396,8 @@ function generateAnswers(correctAnswer) {
     while (wrongAnswers.size < 3) {
         let wrongAnswer;
 
-        if (currentMode === 'transitions') {
+        if (currentOperation === '+' || currentOperation === '-') {
+            // Transitions-style wrong answers (for addition/subtraction)
             const strategy = randomInt(1, 3);
 
             if (strategy === 1) {
@@ -399,6 +412,7 @@ function generateAnswers(correctAnswer) {
                 wrongAnswer = correctAnswer + randomInt(-8, 8);
             }
         } else {
+            // Multiplication-style wrong answers
             const strategy = randomInt(1, 3);
 
             if (strategy === 1) {
