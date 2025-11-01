@@ -1,11 +1,12 @@
 // ===== GAME STATE =====
-let currentMode = null; // 'game' or 'practice'
+let currentMode = null; // 'game', 'practice', or 'transitions'
 let currentStreak = 0;
 let bestStreak = 0;
 let strikes = 0;
 let currentAnswer = 0;
 let currentNum1 = 0;
 let currentNum2 = 0;
+let currentOperation = null; // '+' or '-' for transitions mode
 
 // Practice mode state
 let selectedTable = null; // null means mixed
@@ -13,6 +14,10 @@ let consecutiveCorrect = 0;
 let totalAnswered = 0;
 let correctAnswers = 0;
 let practiceProgress = {}; // Stores mastery status for each table
+
+// Transitions mode state
+let transitionStreak = 0; // Current streak (0-5)
+let starsEarned = 0; // Stars earned (0-5)
 
 // ===== DOM ELEMENTS =====
 // Modals and screens
@@ -26,6 +31,7 @@ const masteryModal = document.getElementById('mastery-modal');
 // Mode selection
 const selectGameModeBtn = document.getElementById('select-game-mode');
 const selectPracticeModeBtn = document.getElementById('select-practice-mode');
+const selectTransitionsModeBtn = document.getElementById('select-transitions-mode');
 const switchModeBtn = document.getElementById('switch-mode-btn');
 const modeText = document.getElementById('mode-text');
 
@@ -75,6 +81,14 @@ const continuePracticeBtn = document.getElementById('continue-practice');
 const newTableBtn = document.getElementById('new-table-btn');
 const tryGameBtn = document.getElementById('try-game-btn');
 
+// Transitions mode elements
+const transitionsStats = document.getElementById('transitions-stats');
+const starsContainer = document.getElementById('stars-container');
+
+// Seven stars modal
+const sevenStarsModal = document.getElementById('seven-stars-modal');
+const continueAfterSevenBtn = document.getElementById('continue-after-seven');
+
 // ===== INITIALIZATION =====
 function init() {
     // Load saved data
@@ -105,6 +119,7 @@ function setupEventListeners() {
     // Mode selection
     selectGameModeBtn.addEventListener('click', () => startMode('game'));
     selectPracticeModeBtn.addEventListener('click', () => showTableSelection());
+    selectTransitionsModeBtn.addEventListener('click', () => startMode('transitions'));
     switchModeBtn.addEventListener('click', showModeMenu);
 
     // Table selection
@@ -135,6 +150,12 @@ function setupEventListeners() {
         masteryModal.classList.remove('show');
         startMode('game');
     });
+
+    // Seven stars modal
+    continueAfterSevenBtn.addEventListener('click', () => {
+        sevenStarsModal.classList.remove('show');
+        generateProblem();
+    });
 }
 
 // ===== MODE MANAGEMENT =====
@@ -161,6 +182,7 @@ function startMode(mode, table = null) {
     tableSelection.classList.remove('show');
     gameOverModal.classList.remove('show');
     masteryModal.classList.remove('show');
+    sevenStarsModal.classList.remove('show');
 
     // Show game container
     gameContainer.style.display = 'block';
@@ -170,8 +192,10 @@ function startMode(mode, table = null) {
 
     if (mode === 'game') {
         setupGameMode();
-    } else {
+    } else if (mode === 'practice') {
         setupPracticeMode();
+    } else if (mode === 'transitions') {
+        setupTransitionsMode();
     }
 
     // Generate first problem
@@ -181,11 +205,13 @@ function startMode(mode, table = null) {
 function setupGameMode() {
     // Update UI
     document.body.classList.remove('practice-mode');
+    document.body.classList.remove('transitions-mode');
     modeText.textContent = '🎮 Spelläge';
 
     // Show/hide appropriate headers
     gameStats.style.display = 'flex';
     practiceStats.style.display = 'none';
+    transitionsStats.style.display = 'none';
 
     // Update stats
     bestStreakEl.textContent = bestStreak;
@@ -198,6 +224,7 @@ function setupGameMode() {
 function setupPracticeMode() {
     // Update UI
     document.body.classList.add('practice-mode');
+    document.body.classList.remove('transitions-mode');
 
     if (selectedTable) {
         modeText.textContent = `📖 Övningsläge: ${selectedTable}× Tabellen`;
@@ -210,9 +237,25 @@ function setupPracticeMode() {
     // Show/hide appropriate headers
     gameStats.style.display = 'none';
     practiceStats.style.display = 'block';
+    transitionsStats.style.display = 'none';
 
     // Reset practice stats
     updatePracticeStats();
+}
+
+function setupTransitionsMode() {
+    // Update UI
+    document.body.classList.add('transitions-mode');
+    document.body.classList.remove('practice-mode');
+    modeText.textContent = '📊 Öva Övergångar';
+
+    // Show/hide appropriate headers
+    gameStats.style.display = 'none';
+    practiceStats.style.display = 'none';
+    transitionsStats.style.display = 'flex';
+
+    // Render stars
+    renderStars();
 }
 
 function resetGameState() {
@@ -221,6 +264,7 @@ function resetGameState() {
     consecutiveCorrect = 0;
     totalAnswered = 0;
     correctAnswers = 0;
+    transitionStreak = 0;
 }
 
 // ===== TABLE SELECTION =====
@@ -247,32 +291,71 @@ function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function generateTransitionProblem() {
+    // Randomly choose addition or subtraction
+    const isAddition = Math.random() < 0.5;
+
+    if (isAddition) {
+        // Generate addition that crosses a ten
+        do {
+            currentNum1 = randomInt(11, 89);
+        } while (currentNum1 % 10 === 0);
+
+        const nextTen = Math.ceil(currentNum1 / 10) * 10;
+        const distanceToTen = nextTen - currentNum1;
+        currentNum2 = randomInt(distanceToTen + 1, Math.min(distanceToTen + 10, 20));
+
+        currentOperation = '+';
+        currentAnswer = currentNum1 + currentNum2;
+    } else {
+        // Generate subtraction that crosses a ten
+        do {
+            currentNum1 = randomInt(11, 90);
+        } while (currentNum1 % 10 === 0);
+
+        const prevTen = Math.floor(currentNum1 / 10) * 10;
+        const distanceFromTen = currentNum1 - prevTen;
+        currentNum2 = randomInt(distanceFromTen + 1, Math.min(distanceFromTen + 10, 20));
+
+        currentOperation = '-';
+        currentAnswer = currentNum1 - currentNum2;
+    }
+}
+
 function generateProblem() {
     // Clear feedback
     feedbackEl.textContent = '';
     feedbackEl.className = 'feedback';
 
     // Generate numbers based on mode
-    if (currentMode === 'practice' && selectedTable !== null) {
+    if (currentMode === 'transitions') {
+        // Transitions mode - generate addition or subtraction that crosses tens
+        generateTransitionProblem();
+    } else if (currentMode === 'practice' && selectedTable !== null) {
         // Practice mode with specific table
         currentNum1 = selectedTable;
         currentNum2 = randomInt(1, 10);
+        currentOperation = '×';
 
         // 50% chance to swap
         if (Math.random() < 0.5) {
             [currentNum1, currentNum2] = [currentNum2, currentNum1];
         }
+
+        // Calculate correct answer
+        currentAnswer = currentNum1 * currentNum2;
     } else {
         // Game mode or mixed practice
         currentNum1 = randomInt(1, 10);
         currentNum2 = randomInt(1, 10);
+        currentOperation = '×';
+
+        // Calculate correct answer
+        currentAnswer = currentNum1 * currentNum2;
     }
 
-    // Calculate correct answer
-    currentAnswer = currentNum1 * currentNum2;
-
     // Display question
-    questionEl.textContent = `${currentNum1} × ${currentNum2}`;
+    questionEl.textContent = `${currentNum1} ${currentOperation} ${currentNum2}`;
 
     // Generate and display answers
     const answers = generateAnswers(currentAnswer);
@@ -300,18 +383,35 @@ function generateAnswers(correctAnswer) {
 
     while (wrongAnswers.size < 3) {
         let wrongAnswer;
-        const strategy = randomInt(1, 3);
 
-        if (strategy === 1) {
-            wrongAnswer = correctAnswer + randomInt(-10, 10);
-        } else if (strategy === 2) {
-            wrongAnswer = correctAnswer + randomInt(-5, 5);
+        if (currentMode === 'transitions') {
+            const strategy = randomInt(1, 3);
+
+            if (strategy === 1) {
+                wrongAnswer = correctAnswer + randomInt(-5, 5);
+            } else if (strategy === 2) {
+                if (currentOperation === '+') {
+                    wrongAnswer = currentNum1 + currentNum2 - 10;
+                } else {
+                    wrongAnswer = currentNum1 - currentNum2 + 10;
+                }
+            } else {
+                wrongAnswer = correctAnswer + randomInt(-8, 8);
+            }
         } else {
-            wrongAnswer = randomInt(1, 10) * randomInt(1, 10);
+            const strategy = randomInt(1, 3);
+
+            if (strategy === 1) {
+                wrongAnswer = correctAnswer + randomInt(-10, 10);
+            } else if (strategy === 2) {
+                wrongAnswer = correctAnswer + randomInt(-5, 5);
+            } else {
+                wrongAnswer = randomInt(1, 10) * randomInt(1, 10);
+            }
         }
 
         if (wrongAnswer > 0 &&
-            wrongAnswer <= 100 &&
+            wrongAnswer <= 120 &&
             wrongAnswer !== correctAnswer &&
             !wrongAnswers.has(wrongAnswer)) {
             wrongAnswers.add(wrongAnswer);
@@ -378,7 +478,7 @@ function handleCorrectAnswer() {
             bestStreakEl.textContent = bestStreak;
             localStorage.setItem('bestStreak', bestStreak);
         }
-    } else {
+    } else if (currentMode === 'practice') {
         // Practice mode logic
         correctAnswers++;
         consecutiveCorrect++;
@@ -405,6 +505,36 @@ function handleCorrectAnswer() {
                 showMasteryModal();
             }, 1500);
             return;
+        }
+    } else if (currentMode === 'transitions') {
+        // Transitions mode logic
+        transitionStreak++;
+
+        // Check for star (5 in a row)
+        if (transitionStreak >= 5 && starsEarned < 5) {
+            // Show positive feedback
+            const message = positiveFeedback[randomInt(0, positiveFeedback.length - 1)];
+            feedbackEl.textContent = message;
+            feedbackEl.classList.add('positive');
+
+            // Award star
+            transitionStreak = 0;
+            starsEarned++;
+            renderStars();
+
+            // Check if all 5 stars earned
+            if (starsEarned >= 5) {
+                setTimeout(() => {
+                    showSevenStarsModal();
+                }, 1500);
+                return;
+            } else {
+                // Continue to next problem
+                setTimeout(() => {
+                    generateProblem();
+                }, 1500);
+                return;
+            }
         }
     }
 
@@ -449,10 +579,13 @@ function handleWrongAnswer(selectedAnswer) {
             }, 2000);
             return;
         }
-    } else {
+    } else if (currentMode === 'practice') {
         // Practice mode logic - reset consecutive counter
         consecutiveCorrect = 0;
         updatePracticeStats();
+    } else if (currentMode === 'transitions') {
+        // Transitions mode logic - reset streak
+        transitionStreak = 0;
     }
 
     // Wait 2 seconds, then generate new problem
@@ -541,6 +674,42 @@ function showGameOver() {
 function restartGame() {
     gameOverModal.classList.remove('show');
     startMode('game');
+}
+
+// ===== TRANSITIONS MODE FUNCTIONS =====
+function renderStars() {
+    starsContainer.innerHTML = '';
+
+    // Star colors (rainbow)
+    const starColors = [
+        '#FF6B6B', // Red
+        '#FFA500', // Orange
+        '#FFD700', // Gold
+        '#6BCF7F', // Green
+        '#4ECDC4'  // Turquoise
+    ];
+
+    for (let i = 0; i < 5; i++) {
+        const star = document.createElement('span');
+        star.className = 'star';
+
+        if (i < starsEarned) {
+            // Earned star - colored
+            star.textContent = '⭐';
+            star.style.color = starColors[i];
+            star.classList.add('earned');
+        } else {
+            // Placeholder - white/gray star
+            star.textContent = '⭐';
+            star.classList.add('placeholder');
+        }
+
+        starsContainer.appendChild(star);
+    }
+}
+
+function showSevenStarsModal() {
+    sevenStarsModal.classList.add('show');
 }
 
 // ===== START APPLICATION =====
