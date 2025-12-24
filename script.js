@@ -402,10 +402,8 @@ function handleWrongAnswer(selectedAnswer) {
     if (currentMode === 'transitions') {
         // Transitions mode logic - reset streak
         transitionStreak = 0;
-    } else if (currentMode === 'division') {
-        // Division mode logic - reset streak
-        divisionStreak = 0;
     }
+    // Division mode: no penalty for wrong answers - keep the streak!
 
     // Wait 2 seconds, then generate new problem
     setTimeout(() => {
