@@ -24,6 +24,12 @@
     --transitions-secondary: #FF8C00;
     --transitions-gradient-start: #FFD93D;
     --transitions-gradient-end: #FFA500;
+
+    /* Division Mode Colors (Blue/Cyan) */
+    --division-primary: #3498db;
+    --division-secondary: #2980b9;
+    --division-gradient-start: #74b9ff;
+    --division-gradient-end: #3498db;
 }
 
 body {
@@ -43,6 +49,10 @@ body.practice-mode {
 
 body.transitions-mode {
     background: linear-gradient(135deg, var(--transitions-gradient-start) 0%, var(--transitions-gradient-end) 100%);
+}
+
+body.division-mode {
+    background: linear-gradient(135deg, var(--division-gradient-start) 0%, var(--division-gradient-end) 100%);
 }
 
 .container {
@@ -447,6 +457,22 @@ body.transitions-mode {
     color: white;
 }
 
+.division-mode-btn {
+    border-color: var(--division-primary);
+}
+
+.division-mode-btn:hover {
+    background: linear-gradient(135deg, var(--division-primary) 0%, var(--division-secondary) 100%);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+}
+
+.division-mode-btn:hover .mode-icon,
+.division-mode-btn:hover .mode-title,
+.division-mode-btn:hover .mode-desc {
+    color: white;
+}
+
 .mode-icon {
     font-size: 3em;
 }
@@ -756,6 +782,19 @@ body.transitions-mode .answer-btn:hover:not(:disabled) {
     background: var(--transitions-secondary);
 }
 
+/* Division mode styling for components */
+body.division-mode .question-box {
+    border-color: var(--division-primary);
+}
+
+body.division-mode .answer-btn {
+    background: var(--division-primary);
+}
+
+body.division-mode .answer-btn:hover:not(:disabled) {
+    background: var(--division-secondary);
+}
+
 /* ===== REFERENCE TABLE MODAL ===== */
 .table-modal-content {
     max-width: 400px;
@@ -956,6 +995,10 @@ body.transitions-mode .answer-btn:hover:not(:disabled) {
 
 /* ===== RESPONSIVE UPDATES ===== */
 @media (max-width: 768px) {
+    .mode-btn {
+        padding: 25px 30px;
+    }
+
     .mode-title {
         font-size: 1.5em;
     }
@@ -1016,12 +1059,21 @@ body.transitions-mode .answer-btn:hover:not(:disabled) {
         font-size: 1.1em;
     }
 
+    .mode-btn {
+        padding: 20px 25px;
+        gap: 8px;
+    }
+
+    .mode-icon {
+        font-size: 2em;
+    }
+
     .mode-title {
-        font-size: 1.3em;
+        font-size: 1.2em;
     }
 
     .mode-desc {
-        font-size: 1em;
+        font-size: 0.95em;
     }
 
     .table-grid {
