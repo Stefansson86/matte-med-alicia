@@ -1,8 +1,5 @@
 // ===== GAME STATE =====
 let currentMode = null; // 'transitions' or 'division'
-let currentStreak = 0;
-let bestStreak = 0;
-let strikes = 0;
 let currentAnswer = 0;
 let currentNum1 = 0;
 let currentNum2 = 0;
@@ -19,11 +16,7 @@ let divisionStarsEarned = 0; // Stars earned (0-5)
 // ===== DOM ELEMENTS =====
 // Modals and screens
 const modeMenu = document.getElementById('mode-menu');
-const tableSelection = document.getElementById('table-selection');
 const gameContainer = document.getElementById('game-container');
-const gameOverModal = document.getElementById('game-over-modal');
-const referenceTableModal = document.getElementById('reference-table-modal');
-const masteryModal = document.getElementById('mastery-modal');
 
 // Mode selection
 const selectTransitionsModeBtn = document.getElementById('select-transitions-mode');
@@ -31,51 +24,10 @@ const selectDivisionModeBtn = document.getElementById('select-division-mode');
 const switchModeBtn = document.getElementById('switch-mode-btn');
 const modeText = document.getElementById('mode-text');
 
-// Table selection
-const tableGrid = document.getElementById('table-grid');
-const selectMixedBtn = document.getElementById('select-mixed');
-const tableBackBtn = document.getElementById('table-back-btn');
-
 // Game elements
 const questionEl = document.getElementById('question');
 const answerGrid = document.getElementById('answer-grid');
 const feedbackEl = document.getElementById('feedback');
-
-// Game mode stats
-const gameStats = document.getElementById('game-stats');
-const currentStreakEl = document.getElementById('current-streak');
-const bestStreakEl = document.getElementById('best-streak');
-const hearts = [
-    document.getElementById('heart-1'),
-    document.getElementById('heart-2'),
-    document.getElementById('heart-3')
-];
-
-// Practice mode stats
-const practiceStats = document.getElementById('practice-stats');
-const practiceTableName = document.getElementById('practice-table-name');
-const consecutiveCorrectEl = document.getElementById('consecutive-correct');
-const totalAnsweredEl = document.getElementById('total-answered');
-const accuracyEl = document.getElementById('accuracy');
-const showTableBtn = document.getElementById('show-table-btn');
-
-// Modals
-const restartBtn = document.getElementById('restart-btn');
-const finalStreakEl = document.getElementById('final-streak');
-const encouragementEl = document.getElementById('encouragement');
-
-// Reference table
-const referenceTableTitle = document.getElementById('reference-table-title');
-const referenceTable = document.getElementById('reference-table');
-const closeTableBtn = document.getElementById('close-table-btn');
-
-// Mastery modal
-const masteryMessage = document.getElementById('mastery-message');
-const masteryTotal = document.getElementById('mastery-total');
-const masteryAccuracy = document.getElementById('mastery-accuracy');
-const continuePracticeBtn = document.getElementById('continue-practice');
-const newTableBtn = document.getElementById('new-table-btn');
-const tryGameBtn = document.getElementById('try-game-btn');
 
 // Transitions mode elements
 const transitionsStats = document.getElementById('transitions-stats');
@@ -154,8 +106,6 @@ function setupTransitionsMode() {
     modeText.textContent = '📊 Övergångar';
 
     // Show/hide appropriate headers
-    gameStats.style.display = 'none';
-    practiceStats.style.display = 'none';
     transitionsStats.style.display = 'flex';
     divisionStats.style.display = 'none';
 
@@ -169,8 +119,6 @@ function setupDivisionMode() {
     modeText.textContent = '➗ Delat med';
 
     // Show/hide appropriate headers
-    gameStats.style.display = 'none';
-    practiceStats.style.display = 'none';
     transitionsStats.style.display = 'none';
     divisionStats.style.display = 'flex';
 
