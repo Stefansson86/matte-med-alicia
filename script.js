@@ -1,23 +1,20 @@
 // ===== GAME STATE =====
-let currentMode = null; // 'game', 'practice', or 'transitions'
+let currentMode = null; // 'transitions' or 'division'
 let currentStreak = 0;
 let bestStreak = 0;
 let strikes = 0;
 let currentAnswer = 0;
 let currentNum1 = 0;
 let currentNum2 = 0;
-let currentOperation = null; // '+' or '-' for transitions mode
-
-// Practice mode state
-let selectedTable = null; // null means mixed
-let consecutiveCorrect = 0;
-let totalAnswered = 0;
-let correctAnswers = 0;
-let practiceProgress = {}; // Stores mastery status for each table
+let currentOperation = null; // '+', '-', or '÷' for operation
 
 // Transitions mode state
 let transitionStreak = 0; // Current streak (0-5)
 let starsEarned = 0; // Stars earned (0-5)
+
+// Division mode state
+let divisionStreak = 0; // Current streak (0-5)
+let divisionStarsEarned = 0; // Stars earned (0-5)
 
 // ===== DOM ELEMENTS =====
 // Modals and screens
@@ -29,9 +26,8 @@ const referenceTableModal = document.getElementById('reference-table-modal');
 const masteryModal = document.getElementById('mastery-modal');
 
 // Mode selection
-const selectGameModeBtn = document.getElementById('select-game-mode');
-const selectPracticeModeBtn = document.getElementById('select-practice-mode');
 const selectTransitionsModeBtn = document.getElementById('select-transitions-mode');
+const selectDivisionModeBtn = document.getElementById('select-division-mode');
 const switchModeBtn = document.getElementById('switch-mode-btn');
 const modeText = document.getElementById('mode-text');
 
@@ -85,6 +81,10 @@ const tryGameBtn = document.getElementById('try-game-btn');
 const transitionsStats = document.getElementById('transitions-stats');
 const starsContainer = document.getElementById('stars-container');
 
+// Division mode elements
+const divisionStats = document.getElementById('division-stats');
+const divisionStarsContainer = document.getElementById('division-stars-container');
+
 // Seven stars modal
 const sevenStarsModal = document.getElementById('seven-stars-modal');
 const continueAfterSevenBtn = document.getElementById('continue-after-seven');
@@ -102,54 +102,14 @@ function init() {
 }
 
 function loadSavedData() {
-    // Load game mode best streak
-    const savedBestStreak = localStorage.getItem('bestStreak');
-    if (savedBestStreak) {
-        bestStreak = parseInt(savedBestStreak);
-    }
-
-    // Load practice progress
-    const savedProgress = localStorage.getItem('practiceProgress');
-    if (savedProgress) {
-        practiceProgress = JSON.parse(savedProgress);
-    }
+    // No saved data needed for current modes
 }
 
 function setupEventListeners() {
     // Mode selection
-    selectGameModeBtn.addEventListener('click', () => startMode('game'));
-    selectPracticeModeBtn.addEventListener('click', () => showTableSelection());
     selectTransitionsModeBtn.addEventListener('click', () => startMode('transitions'));
+    selectDivisionModeBtn.addEventListener('click', () => startMode('division'));
     switchModeBtn.addEventListener('click', showModeMenu);
-
-    // Table selection
-    tableBackBtn.addEventListener('click', showModeMenu);
-    selectMixedBtn.addEventListener('click', () => startMode('practice', null));
-
-    // Game over
-    restartBtn.addEventListener('click', restartGame);
-
-    // Reference table
-    showTableBtn.addEventListener('click', showReferenceTable);
-    closeTableBtn.addEventListener('click', () => {
-        referenceTableModal.classList.remove('show');
-    });
-
-    // Mastery modal
-    continuePracticeBtn.addEventListener('click', () => {
-        masteryModal.classList.remove('show');
-        startMode('practice', selectedTable);
-    });
-
-    newTableBtn.addEventListener('click', () => {
-        masteryModal.classList.remove('show');
-        showTableSelection();
-    });
-
-    tryGameBtn.addEventListener('click', () => {
-        masteryModal.classList.remove('show');
-        startMode('game');
-    });
 
     // Seven stars modal
     continueAfterSevenBtn.addEventListener('click', () => {
@@ -161,27 +121,15 @@ function setupEventListeners() {
 // ===== MODE MANAGEMENT =====
 function showModeMenu() {
     modeMenu.classList.add('show');
-    tableSelection.classList.remove('show');
     gameContainer.style.display = 'none';
-    gameOverModal.classList.remove('show');
-    masteryModal.classList.remove('show');
+    sevenStarsModal.classList.remove('show');
 }
 
-function showTableSelection() {
-    modeMenu.classList.remove('show');
-    tableSelection.classList.add('show');
-    renderTableGrid();
-}
-
-function startMode(mode, table = null) {
+function startMode(mode) {
     currentMode = mode;
-    selectedTable = table;
 
     // Hide all modals
     modeMenu.classList.remove('show');
-    tableSelection.classList.remove('show');
-    gameOverModal.classList.remove('show');
-    masteryModal.classList.remove('show');
     sevenStarsModal.classList.remove('show');
 
     // Show game container
@@ -190,100 +138,49 @@ function startMode(mode, table = null) {
     // Reset state
     resetGameState();
 
-    if (mode === 'game') {
-        setupGameMode();
-    } else if (mode === 'practice') {
-        setupPracticeMode();
-    } else if (mode === 'transitions') {
+    if (mode === 'transitions') {
         setupTransitionsMode();
+    } else if (mode === 'division') {
+        setupDivisionMode();
     }
 
     // Generate first problem
     generateProblem();
 }
 
-function setupGameMode() {
-    // Update UI
-    document.body.classList.remove('practice-mode');
-    document.body.classList.remove('transitions-mode');
-    modeText.textContent = '🧮 Matteträning';
-
-    // Show/hide appropriate headers
-    gameStats.style.display = 'flex';
-    practiceStats.style.display = 'none';
-    transitionsStats.style.display = 'none';
-
-    // Update stats
-    bestStreakEl.textContent = bestStreak;
-    currentStreakEl.textContent = currentStreak;
-
-    // Reset hearts
-    hearts.forEach(heart => heart.classList.remove('faded'));
-}
-
-function setupPracticeMode() {
-    // Update UI
-    document.body.classList.add('practice-mode');
-    document.body.classList.remove('transitions-mode');
-
-    if (selectedTable) {
-        modeText.textContent = `📖 Övningsläge: ${selectedTable}× Tabellen`;
-        practiceTableName.textContent = `${selectedTable}× Tabellen`;
-    } else {
-        modeText.textContent = '📖 Övningsläge: Blandade';
-        practiceTableName.textContent = 'Blandade Tabeller';
-    }
-
-    // Show/hide appropriate headers
-    gameStats.style.display = 'none';
-    practiceStats.style.display = 'block';
-    transitionsStats.style.display = 'none';
-
-    // Reset practice stats
-    updatePracticeStats();
-}
-
 function setupTransitionsMode() {
     // Update UI
-    document.body.classList.add('transitions-mode');
-    document.body.classList.remove('practice-mode');
-    modeText.textContent = '📊 Öva Övergångar';
+    document.body.classList.remove('division-mode');
+    modeText.textContent = '📊 Övergångar';
 
     // Show/hide appropriate headers
     gameStats.style.display = 'none';
     practiceStats.style.display = 'none';
     transitionsStats.style.display = 'flex';
+    divisionStats.style.display = 'none';
 
     // Render stars
     renderStars();
 }
 
-function resetGameState() {
-    currentStreak = 0;
-    strikes = 0;
-    consecutiveCorrect = 0;
-    totalAnswered = 0;
-    correctAnswers = 0;
-    transitionStreak = 0;
+function setupDivisionMode() {
+    // Update UI
+    document.body.classList.add('division-mode');
+    modeText.textContent = '➗ Delat med';
+
+    // Show/hide appropriate headers
+    gameStats.style.display = 'none';
+    practiceStats.style.display = 'none';
+    transitionsStats.style.display = 'none';
+    divisionStats.style.display = 'flex';
+
+    // Render division stars
+    renderDivisionStars();
 }
 
-// ===== TABLE SELECTION =====
-function renderTableGrid() {
-    tableGrid.innerHTML = '';
-
-    for (let i = 1; i <= 10; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'table-btn';
-        btn.textContent = i;
-
-        // Check if mastered
-        if (practiceProgress[i] && practiceProgress[i].mastered) {
-            btn.classList.add('mastered');
-        }
-
-        btn.addEventListener('click', () => startMode('practice', i));
-        tableGrid.appendChild(btn);
-    }
+function resetGameState() {
+    transitionStreak = 0;
+    divisionStreak = 0;
 }
 
 // ===== PROBLEM GENERATION =====
@@ -322,6 +219,21 @@ function generateTransitionProblem() {
     }
 }
 
+function generateDivisionProblem() {
+    // Generate division with whole number result
+    // Divisor: 1-10
+    currentNum2 = randomInt(1, 10);
+
+    // Quotient (answer): chosen so that dividend ≤ 100
+    const maxQuotient = Math.floor(100 / currentNum2);
+    currentAnswer = randomInt(1, maxQuotient);
+
+    // Dividend: divisor × quotient
+    currentNum1 = currentNum2 * currentAnswer;
+
+    currentOperation = '÷';
+}
+
 function generateProblem() {
     // Clear feedback
     feedbackEl.textContent = '';
@@ -331,39 +243,9 @@ function generateProblem() {
     if (currentMode === 'transitions') {
         // Transitions mode - generate addition or subtraction that crosses tens
         generateTransitionProblem();
-    } else if (currentMode === 'practice' && selectedTable !== null) {
-        // Practice mode with specific table
-        currentNum1 = selectedTable;
-        currentNum2 = randomInt(1, 10);
-        currentOperation = '×';
-
-        // 50% chance to swap
-        if (Math.random() < 0.5) {
-            [currentNum1, currentNum2] = [currentNum2, currentNum1];
-        }
-
-        // Calculate correct answer
-        currentAnswer = currentNum1 * currentNum2;
-    } else if (currentMode === 'game') {
-        // Game mode - mixed content: 30% transitions, 70% multiplication
-        if (Math.random() < 0.3) {
-            // 30% chance: Generate transition problem
-            generateTransitionProblem();
-        } else {
-            // 70% chance: Generate multiplication
-            currentNum1 = randomInt(1, 10);
-            currentNum2 = randomInt(1, 10);
-            currentOperation = '×';
-            currentAnswer = currentNum1 * currentNum2;
-        }
-    } else {
-        // Mixed practice mode
-        currentNum1 = randomInt(1, 10);
-        currentNum2 = randomInt(1, 10);
-        currentOperation = '×';
-
-        // Calculate correct answer
-        currentAnswer = currentNum1 * currentNum2;
+    } else if (currentMode === 'division') {
+        // Division mode - generate division with whole number results
+        generateDivisionProblem();
     }
 
     // Display question
@@ -411,16 +293,18 @@ function generateAnswers(correctAnswer) {
             } else {
                 wrongAnswer = correctAnswer + randomInt(-8, 8);
             }
-        } else {
-            // Multiplication-style wrong answers
+        } else if (currentOperation === '÷') {
+            // Division-style wrong answers
             const strategy = randomInt(1, 3);
 
             if (strategy === 1) {
-                wrongAnswer = correctAnswer + randomInt(-10, 10);
+                wrongAnswer = correctAnswer + randomInt(-3, 3);
             } else if (strategy === 2) {
                 wrongAnswer = correctAnswer + randomInt(-5, 5);
             } else {
-                wrongAnswer = randomInt(1, 10) * randomInt(1, 10);
+                // Generate a random quotient
+                const maxQuotient = Math.floor(100 / currentNum2);
+                wrongAnswer = randomInt(1, maxQuotient);
             }
         }
 
@@ -451,10 +335,6 @@ function handleAnswer(selectedAnswer) {
         btn.disabled = true;
     });
 
-    if (currentMode === 'practice') {
-        totalAnswered++;
-    }
-
     // Check if answer is correct
     if (selectedAnswer === currentAnswer) {
         handleCorrectAnswer();
@@ -482,45 +362,7 @@ function handleCorrectAnswer() {
         }
     });
 
-    if (currentMode === 'game') {
-        // Game mode logic
-        currentStreak++;
-        currentStreakEl.textContent = currentStreak;
-
-        if (currentStreak > bestStreak) {
-            bestStreak = currentStreak;
-            bestStreakEl.textContent = bestStreak;
-            localStorage.setItem('bestStreak', bestStreak);
-        }
-    } else if (currentMode === 'practice') {
-        // Practice mode logic
-        correctAnswers++;
-        consecutiveCorrect++;
-        updatePracticeStats();
-
-        // Check for mastery (5 in a row)
-        if (consecutiveCorrect >= 5) {
-            // Show positive feedback
-            const message = positiveFeedback[randomInt(0, positiveFeedback.length - 1)];
-            feedbackEl.textContent = message;
-            feedbackEl.classList.add('positive');
-
-            // Mark as mastered
-            if (selectedTable !== null) {
-                if (!practiceProgress[selectedTable]) {
-                    practiceProgress[selectedTable] = {};
-                }
-                practiceProgress[selectedTable].mastered = true;
-                localStorage.setItem('practiceProgress', JSON.stringify(practiceProgress));
-            }
-
-            // Wait then show mastery modal
-            setTimeout(() => {
-                showMasteryModal();
-            }, 1500);
-            return;
-        }
-    } else if (currentMode === 'transitions') {
+    if (currentMode === 'transitions') {
         // Transitions mode logic
         transitionStreak++;
 
@@ -538,6 +380,36 @@ function handleCorrectAnswer() {
 
             // Check if all 5 stars earned
             if (starsEarned >= 5) {
+                setTimeout(() => {
+                    showSevenStarsModal();
+                }, 1500);
+                return;
+            } else {
+                // Continue to next problem
+                setTimeout(() => {
+                    generateProblem();
+                }, 1500);
+                return;
+            }
+        }
+    } else if (currentMode === 'division') {
+        // Division mode logic
+        divisionStreak++;
+
+        // Check for star (5 in a row)
+        if (divisionStreak >= 5 && divisionStarsEarned < 5) {
+            // Show positive feedback
+            const message = positiveFeedback[randomInt(0, positiveFeedback.length - 1)];
+            feedbackEl.textContent = message;
+            feedbackEl.classList.add('positive');
+
+            // Award star
+            divisionStreak = 0;
+            divisionStarsEarned++;
+            renderDivisionStars();
+
+            // Check if all 5 stars earned
+            if (divisionStarsEarned >= 5) {
                 setTimeout(() => {
                     showSevenStarsModal();
                 }, 1500);
@@ -579,27 +451,12 @@ function handleWrongAnswer(selectedAnswer) {
     feedbackEl.textContent = `Rätt svar är ${currentAnswer}`;
     feedbackEl.classList.add('negative');
 
-    if (currentMode === 'game') {
-        // Game mode logic
-        strikes++;
-        if (strikes <= 3) {
-            hearts[strikes - 1].classList.add('faded');
-        }
-
-        // Check if game over
-        if (strikes >= 3) {
-            setTimeout(() => {
-                showGameOver();
-            }, 2000);
-            return;
-        }
-    } else if (currentMode === 'practice') {
-        // Practice mode logic - reset consecutive counter
-        consecutiveCorrect = 0;
-        updatePracticeStats();
-    } else if (currentMode === 'transitions') {
+    if (currentMode === 'transitions') {
         // Transitions mode logic - reset streak
         transitionStreak = 0;
+    } else if (currentMode === 'division') {
+        // Division mode logic - reset streak
+        divisionStreak = 0;
     }
 
     // Wait 2 seconds, then generate new problem
@@ -608,87 +465,6 @@ function handleWrongAnswer(selectedAnswer) {
     }, 2000);
 }
 
-// ===== PRACTICE MODE STATS =====
-function updatePracticeStats() {
-    consecutiveCorrectEl.textContent = `${consecutiveCorrect}/5`;
-    totalAnsweredEl.textContent = totalAnswered;
-
-    const accuracy = totalAnswered > 0
-        ? Math.round((correctAnswers / totalAnswered) * 100)
-        : 0;
-    accuracyEl.textContent = `${accuracy}%`;
-}
-
-// ===== REFERENCE TABLE =====
-function showReferenceTable() {
-    const table = selectedTable || 7; // Default to 7 if mixed
-    referenceTableTitle.textContent = `${table}× Tabellen`;
-
-    referenceTable.innerHTML = '';
-
-    for (let i = 1; i <= 10; i++) {
-        const row = document.createElement('div');
-        row.className = 'table-row';
-
-        // Highlight current problem if applicable
-        if (selectedTable &&
-            ((currentNum1 === table && currentNum2 === i) ||
-             (currentNum2 === table && currentNum1 === i))) {
-            row.classList.add('current-problem');
-        }
-
-        const problem = document.createElement('span');
-        problem.textContent = `${table} × ${i}`;
-
-        const answer = document.createElement('span');
-        answer.textContent = table * i;
-
-        row.appendChild(problem);
-        row.appendChild(answer);
-        referenceTable.appendChild(row);
-    }
-
-    referenceTableModal.classList.add('show');
-}
-
-// ===== MASTERY MODAL =====
-function showMasteryModal() {
-    const tableName = selectedTable
-        ? `${selectedTable}× tabellen`
-        : 'blandade tabeller';
-
-    masteryMessage.textContent = `Du behärskar ${tableName}!`;
-    masteryTotal.textContent = totalAnswered;
-
-    const accuracy = Math.round((correctAnswers / totalAnswered) * 100);
-    masteryAccuracy.textContent = `${accuracy}%`;
-
-    masteryModal.classList.add('show');
-}
-
-// ===== GAME OVER =====
-function showGameOver() {
-    finalStreakEl.textContent = currentStreak;
-
-    let encouragement;
-    if (currentStreak === 0) {
-        encouragement = "Ingen fara! Multiplikation tar lite tid att lära sig. 🌱";
-    } else if (currentStreak >= 1 && currentStreak <= 4) {
-        encouragement = "Bra början! Fortsätt öva på dina multiplikationstabeller! 🌟";
-    } else if (currentStreak >= 5 && currentStreak <= 9) {
-        encouragement = "Jättebra! Du håller på att bli expert på multiplikation! 🎈";
-    } else {
-        encouragement = "Fantastiskt! Du är en riktig multiplikationschampion! 🏆";
-    }
-
-    encouragementEl.textContent = encouragement;
-    gameOverModal.classList.add('show');
-}
-
-function restartGame() {
-    gameOverModal.classList.remove('show');
-    startMode('game');
-}
 
 // ===== TRANSITIONS MODE FUNCTIONS =====
 function renderStars() {
@@ -719,6 +495,37 @@ function renderStars() {
         }
 
         starsContainer.appendChild(star);
+    }
+}
+
+function renderDivisionStars() {
+    divisionStarsContainer.innerHTML = '';
+
+    // Star colors (rainbow)
+    const starColors = [
+        '#FF6B6B', // Red
+        '#FFA500', // Orange
+        '#FFD700', // Gold
+        '#6BCF7F', // Green
+        '#4ECDC4'  // Turquoise
+    ];
+
+    for (let i = 0; i < 5; i++) {
+        const star = document.createElement('span');
+        star.className = 'star';
+
+        if (i < divisionStarsEarned) {
+            // Earned star - colored
+            star.textContent = '⭐';
+            star.style.color = starColors[i];
+            star.classList.add('earned');
+        } else {
+            // Placeholder - white/gray star
+            star.textContent = '⭐';
+            star.classList.add('placeholder');
+        }
+
+        divisionStarsContainer.appendChild(star);
     }
 }
 
