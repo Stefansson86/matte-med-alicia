@@ -5,14 +5,6 @@ let currentNum1 = 0;
 let currentNum2 = 0;
 let currentOperation = null; // '+', '-', or '÷' for operation
 
-// Transitions mode state
-let transitionStreak = 0; // Current streak (0-5)
-let starsEarned = 0; // Stars earned (0-5)
-
-// Division mode state
-let divisionStreak = 0; // Current streak (0-5)
-let divisionStarsEarned = 0; // Stars earned (0-5)
-
 // ===== DOM ELEMENTS =====
 // Modals and screens
 const modeMenu = document.getElementById('mode-menu');
@@ -28,18 +20,6 @@ const modeText = document.getElementById('mode-text');
 const questionEl = document.getElementById('question');
 const answerGrid = document.getElementById('answer-grid');
 const feedbackEl = document.getElementById('feedback');
-
-// Transitions mode elements
-const transitionsStats = document.getElementById('transitions-stats');
-const starsContainer = document.getElementById('stars-container');
-
-// Division mode elements
-const divisionStats = document.getElementById('division-stats');
-const divisionStarsContainer = document.getElementById('division-stars-container');
-
-// Seven stars modal
-const sevenStarsModal = document.getElementById('seven-stars-modal');
-const continueAfterSevenBtn = document.getElementById('continue-after-seven');
 
 // ===== INITIALIZATION =====
 function init() {
@@ -62,19 +42,12 @@ function setupEventListeners() {
     selectTransitionsModeBtn.addEventListener('click', () => startMode('transitions'));
     selectDivisionModeBtn.addEventListener('click', () => startMode('division'));
     switchModeBtn.addEventListener('click', showModeMenu);
-
-    // Seven stars modal
-    continueAfterSevenBtn.addEventListener('click', () => {
-        sevenStarsModal.classList.remove('show');
-        generateProblem();
-    });
 }
 
 // ===== MODE MANAGEMENT =====
 function showModeMenu() {
     modeMenu.classList.add('show');
     gameContainer.style.display = 'none';
-    sevenStarsModal.classList.remove('show');
 }
 
 function startMode(mode) {
@@ -82,13 +55,9 @@ function startMode(mode) {
 
     // Hide all modals
     modeMenu.classList.remove('show');
-    sevenStarsModal.classList.remove('show');
 
     // Show game container
     gameContainer.style.display = 'block';
-
-    // Reset state
-    resetGameState();
 
     if (mode === 'transitions') {
         setupTransitionsMode();
@@ -104,31 +73,12 @@ function setupTransitionsMode() {
     // Update UI
     document.body.classList.remove('division-mode');
     modeText.textContent = '📊 Övergångar';
-
-    // Show/hide appropriate headers
-    transitionsStats.style.display = 'flex';
-    divisionStats.style.display = 'none';
-
-    // Render stars
-    renderStars();
 }
 
 function setupDivisionMode() {
     // Update UI
     document.body.classList.add('division-mode');
     modeText.textContent = '➗ Delat med';
-
-    // Show/hide appropriate headers
-    transitionsStats.style.display = 'none';
-    divisionStats.style.display = 'flex';
-
-    // Render division stars
-    renderDivisionStars();
-}
-
-function resetGameState() {
-    transitionStreak = 0;
-    divisionStreak = 0;
 }
 
 // ===== PROBLEM GENERATION =====
@@ -310,68 +260,6 @@ function handleCorrectAnswer() {
         }
     });
 
-    if (currentMode === 'transitions') {
-        // Transitions mode logic
-        transitionStreak++;
-
-        // Check for star (5 in a row)
-        if (transitionStreak >= 5 && starsEarned < 5) {
-            // Show positive feedback
-            const message = positiveFeedback[randomInt(0, positiveFeedback.length - 1)];
-            feedbackEl.textContent = message;
-            feedbackEl.classList.add('positive');
-
-            // Award star
-            transitionStreak = 0;
-            starsEarned++;
-            renderStars();
-
-            // Check if all 5 stars earned
-            if (starsEarned >= 5) {
-                setTimeout(() => {
-                    showSevenStarsModal();
-                }, 1500);
-                return;
-            } else {
-                // Continue to next problem
-                setTimeout(() => {
-                    generateProblem();
-                }, 1500);
-                return;
-            }
-        }
-    } else if (currentMode === 'division') {
-        // Division mode logic
-        divisionStreak++;
-
-        // Check for star (5 in a row)
-        if (divisionStreak >= 5 && divisionStarsEarned < 5) {
-            // Show positive feedback
-            const message = positiveFeedback[randomInt(0, positiveFeedback.length - 1)];
-            feedbackEl.textContent = message;
-            feedbackEl.classList.add('positive');
-
-            // Award star
-            divisionStreak = 0;
-            divisionStarsEarned++;
-            renderDivisionStars();
-
-            // Check if all 5 stars earned
-            if (divisionStarsEarned >= 5) {
-                setTimeout(() => {
-                    showSevenStarsModal();
-                }, 1500);
-                return;
-            } else {
-                // Continue to next problem
-                setTimeout(() => {
-                    generateProblem();
-                }, 1500);
-                return;
-            }
-        }
-    }
-
     // Show positive feedback
     const message = positiveFeedback[randomInt(0, positiveFeedback.length - 1)];
     feedbackEl.textContent = message;
@@ -399,84 +287,10 @@ function handleWrongAnswer(selectedAnswer) {
     feedbackEl.textContent = `Rätt svar är ${currentAnswer}`;
     feedbackEl.classList.add('negative');
 
-    if (currentMode === 'transitions') {
-        // Transitions mode logic - reset streak
-        transitionStreak = 0;
-    }
-    // Division mode: no penalty for wrong answers - keep the streak!
-
     // Wait 2 seconds, then generate new problem
     setTimeout(() => {
         generateProblem();
     }, 2000);
-}
-
-
-// ===== TRANSITIONS MODE FUNCTIONS =====
-function renderStars() {
-    starsContainer.innerHTML = '';
-
-    // Star colors (rainbow)
-    const starColors = [
-        '#FF6B6B', // Red
-        '#FFA500', // Orange
-        '#FFD700', // Gold
-        '#6BCF7F', // Green
-        '#4ECDC4'  // Turquoise
-    ];
-
-    for (let i = 0; i < 5; i++) {
-        const star = document.createElement('span');
-        star.className = 'star';
-
-        if (i < starsEarned) {
-            // Earned star - colored
-            star.textContent = '⭐';
-            star.style.color = starColors[i];
-            star.classList.add('earned');
-        } else {
-            // Placeholder - white/gray star
-            star.textContent = '⭐';
-            star.classList.add('placeholder');
-        }
-
-        starsContainer.appendChild(star);
-    }
-}
-
-function renderDivisionStars() {
-    divisionStarsContainer.innerHTML = '';
-
-    // Star colors (rainbow)
-    const starColors = [
-        '#FF6B6B', // Red
-        '#FFA500', // Orange
-        '#FFD700', // Gold
-        '#6BCF7F', // Green
-        '#4ECDC4'  // Turquoise
-    ];
-
-    for (let i = 0; i < 5; i++) {
-        const star = document.createElement('span');
-        star.className = 'star';
-
-        if (i < divisionStarsEarned) {
-            // Earned star - colored
-            star.textContent = '⭐';
-            star.style.color = starColors[i];
-            star.classList.add('earned');
-        } else {
-            // Placeholder - white/gray star
-            star.textContent = '⭐';
-            star.classList.add('placeholder');
-        }
-
-        divisionStarsContainer.appendChild(star);
-    }
-}
-
-function showSevenStarsModal() {
-    sevenStarsModal.classList.add('show');
 }
 
 // ===== START APPLICATION =====
